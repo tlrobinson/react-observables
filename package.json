@@ -1,0 +1,26 @@
+{
+  "name": "react-observables",
+  "version": "1.0.0",
+  "main": "index.js",
+  "license": "MIT",
+  "scripts": {
+    "test": "jest test",
+    "test:watch": "yarn test --watch",
+    "examples": "parcel examples/index.html",
+    "prepublishOnly": "yarn test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^24.7.1",
+    "parcel-bundler": "^1.12.3",
+    "prettier": "^1.17.0",
+    "react": "^16.8.6",
+    "react-dom": "^16.8.6",
+    "react-test-renderer": "^16.8.6",
+    "rxjs": "^6.5.1"
+  },
+  "peerDependencies": {
+    "react": "16",
+    "rxjs": "6"
+  }
+}
