@@ -3,7 +3,8 @@ const Rx = require("rxjs");
 
 const ObservablesContext = React.createContext(null);
 
-const { useSource$, useSink$, useInput$ } = require(".");
+const { useSource$, useSink$, useInput$ } = require("..");
+const { isSubject } = require("../../util");
 
 function useNamed$(name) {
   const observables = React.useContext(ObservablesContext);
@@ -23,13 +24,17 @@ function useNamedInput$(name, ...args) {
   return useInput$(useNamed$(name), ...args);
 }
 
-function NamedObservableProvider({ initialValues = {}, children }) {
+function NamedObservableProvider({
+  observables = {},
+  initialValues = {},
+  children
+}) {
   const initialState = React.useMemo(() => {
-    const subjects = {};
+    observables = { ...observables };
     for (const [name, value] of Object.entries(initialValues)) {
-      subjects[name] = new Rx.BehaviorSubject(value);
+      observables[name] = new Rx.BehaviorSubject(value);
     }
-    return subjects;
+    return observables;
   }, []);
   const [value] = React.useState(initialState);
   return (

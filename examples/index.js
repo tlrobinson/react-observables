@@ -1,14 +1,15 @@
 import React from "react";
 import ReactDOM from "react-dom";
 
-import { fromEvent } from "rxjs";
+import { BehaviorSubject, fromEvent } from "rxjs";
 import {
   map,
   takeUntil,
   concatAll,
   pairwise,
   switchMapTo,
-  scan
+  scan,
+  distinctUntilChanged
 } from "rxjs/operators";
 
 import {
@@ -24,46 +25,31 @@ import {
 } from "..";
 
 const App = () => {
-  const opacity$ = useSubject$(0.5);
   return (
     <div>
-      <InputDemo opacity$={opacity$} />
-      <ObservableDemo
-        opacity$={opacity$}
-        onClick={() => opacity$.next(Math.random())}
-      />
+      <BasicDemo />
+      <NamedDemo />
       <DragDemo />
-      <InputDemoNamed />
+      <RxduxDemo />
     </div>
   );
 };
 
-const InputDemo = ({ opacity$ }) => {
+const BasicDemo = () => {
+  const opacity$ = useSubject$(0.5);
   const input = useInput$(opacity$);
   return (
-    <>
+    <div>
       <input type="number" min={0} max={1} step={0.01} {...input} />
       <input type="range" min={0} max={1} step={0.01} {...input} />
-    </>
-  );
-};
-
-const InputDemoNamed = () => {
-  const value = useSink$(useNamed$("foo"));
-  return (
-    <>
-      <input value={value} />
-      <input value={useNamedSink$("foo", map(v => v * 2))} />
-      <input type="range" {...useNamedInput$("foo")} />
-      <input
-        type="range"
-        onChange={useNamedSource$("foo", map(e => e.target.value))}
+      <OpacityThing
+        opacity$={opacity$}
+        onClick={() => opacity$.next(Math.random())}
       />
-    </>
+    </div>
   );
 };
-
-const ObservableDemo = ({ opacity$, onClick }) => {
+const OpacityThing = ({ opacity$, onClick }) => {
   const opacity = useSink$(opacity$);
   return (
     <span
@@ -74,6 +60,77 @@ const ObservableDemo = ({ opacity$, onClick }) => {
     </span>
   );
 };
+
+const NamedDemo = () => {
+  return (
+    <div>
+      <input defaultValue={useSink$(useNamed$("foo"))} />
+      <input defaultValue={useNamedSink$("foo", map(v => v * 2))} />
+      <input type="range" {...useNamedInput$("foo")} />
+      <input
+        type="range"
+        onChange={useNamedSource$("foo", map(e => e.target.value))}
+      />
+    </div>
+  );
+};
+
+// PSEUDO-REDUX IMPLEMENTATION
+
+const RxduxProvider = ({ reducer, initialState, children }) => {
+  const dispatch = new BehaviorSubject(initialState);
+  const state = dispatch.pipe(scan(reducer));
+  return (
+    <NamedObservableProvider observables={{ dispatch, state }}>
+      {children}
+    </NamedObservableProvider>
+  );
+};
+function useDispatch() {
+  return useNamedSource$("dispatch");
+}
+function useSelector(selector, deps) {
+  return useNamedSink$(
+    "state",
+    observable => observable.pipe(map(selector)).pipe(distinctUntilChanged()),
+    deps
+  );
+}
+
+// PSEUDO-REDUX EXMAPLE
+
+const Counter = () => {
+  const count = useSelector(state => state.count);
+  const dispatch = useDispatch();
+  return (
+    <div>
+      count={count}
+      <button onClick={() => dispatch({ type: "inc" })}>+</button>
+      <button onClick={() => dispatch({ type: "dec" })}>-</button>
+    </div>
+  );
+};
+
+const RxduxDemo = () => {
+  return (
+    <RxduxProvider reducer={reducer} initialState={{ count: 0 }}>
+      <Counter />
+    </RxduxProvider>
+  );
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case "inc":
+      return { ...state, count: state.count + 1 };
+    case "dec":
+      return { ...state, count: state.count - 1 };
+    default:
+      return state;
+  }
+}
+
+// DRAG DEMO
 
 const mousemove$ = fromEvent(window, "mousemove");
 const mouseup$ = fromEvent(window, "mouseup");
